@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chama Manager - Members</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/config.js" defer></script>
+  <script src="/js/auth.js" defer></script>
+  <script src="/js/members.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="dashboard.html">
+        <span class="brand-mark">CM</span>
+        <span>Chama Manager</span>
+      </a>
+
+      <nav class="nav-links" aria-label="Primary navigation">
+        <a class="nav-link" href="dashboard.html">Dashboard</a>
+        <a class="nav-link active" href="members.html">Members</a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="logout-button" type="button" id="logoutBtn">Logout</button>
+      </div>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Members</p>
+          <h1>Member management</h1>
+        </div>
+        <div class="user-badge" id="userBadge">
+          <strong>Signed in</strong>
+          <span>Loading account</span>
+        </div>
+      </header>
+
+      <div class="member-page-grid">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Add member</h2>
+          </div>
+          <div class="panel-body">
+            <form class="form-grid" id="memberForm">
+              <div class="field">
+                <label for="fullName">Full name</label>
+                <input type="text" id="fullName" name="full_name" required autocomplete="name">
+              </div>
+
+              <div class="field">
+                <label for="phone">Phone number</label>
+                <input type="tel" id="phone" name="phone" required autocomplete="tel">
+              </div>
+
+              <div class="field">
+                <label for="nationalId">National ID</label>
+                <input type="text" id="nationalId" name="national_id" required>
+              </div>
+
+              <div class="field">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" autocomplete="email">
+              </div>
+
+              <div class="field">
+                <label for="role">Role</label>
+                <select id="role" name="role">
+                  <option value="Member">Member</option>
+                  <option value="Chairperson">Chairperson</option>
+                  <option value="Treasurer">Treasurer</option>
+                  <option value="Secretary">Secretary</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="status">Status</label>
+                <select id="status" name="status">
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+
+              <div class="form-actions">
+                <button class="secondary-button" type="reset">Clear</button>
+                <button class="primary-button" type="submit" id="saveMemberBtn">Save member</button>
+              </div>
+            </form>
+            <p class="status-message" id="formStatus"></p>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Members</h2>
+            <div class="toolbar">
+              <input type="search" id="memberSearch" placeholder="Search members">
+              <button class="secondary-button" type="button" id="refreshMembersBtn">Refresh</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>National ID</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="membersTableBody"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="emptyState" hidden>No members found</div>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

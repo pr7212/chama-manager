@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Chama Dashboard</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+
+  <body class="bg-gray-100">
+    <!-- NAVBAR -->
+    <nav class="bg-blue-600 text-white p-4 flex justify-between">
+      <h1 class="text-2xl font-bold">Chama Manager</h1>
+
+      <button onclick="logout()" class="bg-red-500 px-4 py-2 rounded">
+        Logout
+      </button>
+    </nav>
+
+    <!-- MAIN -->
+    <div class="max-w-7xl mx-auto p-6">
+      <!-- STATS -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-gray-500">Total Members</h2>
+
+          <p id="totalMembers" class="text-3xl font-bold">0</p>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-gray-500">Total Contributions</h2>
+
+          <p id="totalContributions" class="text-3xl font-bold">KES 0</p>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h2 class="text-gray-500">Active Loans</h2>
+
+          <p id="activeLoans" class="text-3xl font-bold">0</p>
+        </div>
+      </div>
+
+      <!-- ADD MEMBER -->
+      <div class="bg-white p-6 rounded-lg shadow mb-8">
+        <h2 class="text-xl font-bold mb-4">Add Member</h2>
+
+        <form id="memberForm" class="grid md:grid-cols-4 gap-4">
+          <input
+            type="text"
+            id="full_name"
+            placeholder="Full Name"
+            class="border p-3 rounded"
+          />
+
+          <input
+            type="text"
+            id="phone"
+            placeholder="Phone Number"
+            class="border p-3 rounded"
+          />
+
+          <input
+            type="text"
+            id="national_id"
+            placeholder="National ID"
+            class="border p-3 rounded"
+          />
+
+          <button class="bg-blue-600 text-white rounded">Add Member</button>
+        </form>
+      </div>
+
+      <!-- CONTRIBUTION ANALYTICS -->
+      <div class="bg-white p-6 rounded-lg shadow mb-8">
+        <h2 class="text-xl font-bold mb-4">Contribution Analytics</h2>
+        <canvas id="contributionChart"></canvas>
+      </div>
+
+      <!-- NOTIFICATIONS -->
+      <div class="bg-white p-6 rounded-lg shadow mb-8">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xl font-bold">Notifications</h2>
+          <span
+            id="notifBadge"
+            class="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded hidden"
+            >0</span
+          >
+        </div>
+        <ul id="notificationsList" class="space-y-2 text-sm"></ul>
+        <div id="notificationsEmpty" class="text-gray-500 text-sm mt-3 hidden">
+          No notifications
+        </div>
+      </div>
+
+      <!-- MEMBERS -->
+      <div class="bg-white p-6 rounded-lg shadow mb-8">
+        <h2 class="text-xl font-bold mb-4">Members</h2>
+
+        <div
+          id="membersContainer"
+          class="grid md:grid-cols-2 lg:grid-cols-3 gap-4"
+        ></div>
+      </div>
+
+      <!-- CONTRIBUTIONS -->
+      <div class="bg-white p-6 rounded-lg shadow mb-8">
+        <h2 class="text-xl font-bold mb-4">Record Contribution</h2>
+
+        <form id="contributionForm" class="grid md:grid-cols-4 gap-4">
+          <select id="memberSelect" class="border p-3 rounded">
+            <option>Select Member</option>
+          </select>
+
+          <input
+            type="number"
+            id="amount"
+            placeholder="Amount"
+            class="border p-3 rounded"
+          />
+
+          <input
+            type="text"
+            id="month"
+            placeholder="Month"
+            class="border p-3 rounded"
+          />
+
+          <input
+            type="number"
+            id="year"
+            placeholder="Year"
+            class="border p-3 rounded"
+          />
+
+          <button class="bg-green-600 text-white rounded p-3">Save</button>
+        </form>
+      </div>
+
+      <!-- LOANS -->
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h2 class="text-xl font-bold mb-4">Loans</h2>
+
+        <div
+          id="loansContainer"
+          class="grid md:grid-cols-2 lg:grid-cols-3 gap-4"
+        ></div>
+      </div>
+    </div>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/api/api.js"></script>
+    <script src="../js/auth/auth.js"></script>
+    <script src="../js/utils/date.js"></script>
+    <script src="../js/utils/currency.js"></script>
+    <script src="../js/members/members.js"></script>
+    <script src="../js/contributions/contributions.js"></script>
+    <script src="../js/loans/loans.js"></script>
+    <script src="../js/dashboard.js"></script>
+    <script src="../js/notifications.js"></script>
+  </body>
+</html>
