@@ -1,97 +1,164 @@
-const contributionForm = document.getElementById('contributionForm');
+const pool = require('../config/db');
+const PDFDocument = require('pdfkit');
 
-if (contributionForm) {
-  contributionForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const member_id = document.getElementById('memberSelect').value;
-    const amount = document.getElementById('amount').value;
-    const contribution_month = document.getElementById('month').value.trim();
-    const contribution_year = document.getElementById('year').value;
-
-    const button = contributionForm.querySelector('button');
-
-    if (!member_id || !amount || !contribution_month || !contribution_year) {
-      alert('All contribution fields required');
-      return;
-    }
-
-    if (Number(amount) <= 0) {
-      alert('Amount must be greater than 0');
-      return;
-    }
-
-    setLoading(button, 'Saving...');
-
-    try {
-      const data = await apiRequest('/contributions', 'POST', {
-        member_id,
-        amount,
-        contribution_month,
-        contribution_year,
-      });
-
-      alert(data.message || 'Contribution saved');
-      contributionForm.reset();
-
-      loadContributions();
-      renderContributionChart();
-    } catch (error) {
-      console.log(error);
-    } finally {
-      clearLoading(button);
-    }
-  });
-}
-
-async function loadContributions() {
+// GET MEMBER STATEMENT
+exports.getMemberStatement = async (req, res) => {
   try {
-    const contributions = await apiRequest('/contributions');
+    const memberId = req.params.id;
 
-    if (!Array.isArray(contributions)) return;
-
-    const contributionsContainer = document.getElementById(
-      'contributionsContainer'
+    const memberResult = await pool.query(
+      `
+      SELECT * FROM members
+      WHERE id = $1
+      `,
+      [memberId]
     );
-    const totalContributionsElement =
-      document.getElementById('totalContributions');
 
-    let total = 0;
+    const contributionsResult = await pool.query(
+      `
+      SELECT *
+      FROM contributions
+      WHERE member_id = $1
+      ORDER BY created_at DESC
+      `,
+      [memberId]
+    );
 
-    contributions.forEach((item) => {
-      total += Number(item.amount);
+    const loansResult = await pool.query(
+      `
+      SELECT *
+      FROM loans
+      WHERE member_id = $1
+      ORDER BY created_at DESC
+      `,
+      [memberId]
+    );
+
+    const member = memberResult.rows[0];
+
+    if (!member) {
+      return res.status(404).json({
+        message: 'Member not found',
+      });
+    }
+
+    const contributions = contributionsResult.rows;
+    const loans = loansResult.rows;
+
+    const totalContributions = contributions.reduce(
+      (sum, item) => sum + Number(item.amount),
+      0
+    );
+
+    const activeLoans = loans.filter((loan) => loan.status === 'active');
+
+    res.status(200).json({
+      member,
+      contributions,
+      loans,
+      summary: {
+        totalContributions,
+        activeLoans: activeLoans.length,
+      },
+    });
+  } catch (error) {
+    console.error(error.message);
+
+    res.status(500).json({
+      message: 'Server error',
+    });
+  }
+};
+
+// GENERATE PDF
+exports.generateStatementPDF = async (req, res) => {
+  try {
+    const memberId = req.params.id;
+
+    const memberResult = await pool.query(
+      `
+      SELECT * FROM members
+      WHERE id = $1
+      `,
+      [memberId]
+    );
+
+    const member = memberResult.rows[0];
+
+    if (!member) {
+      return res.status(404).json({
+        message: 'Member not found',
+      });
+    }
+
+    const contributionsResult = await pool.query(
+      `
+      SELECT *
+      FROM contributions
+      WHERE member_id = $1
+      `,
+      [memberId]
+    );
+
+    const loansResult = await pool.query(
+      `
+      SELECT *
+      FROM loans
+      WHERE member_id = $1
+      `,
+      [memberId]
+    );
+
+    const doc = new PDFDocument();
+
+    res.setHeader('Content-Type', 'application/pdf');
+
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=statement_${member.id}.pdf`
+    );
+
+    doc.pipe(res);
+
+    doc.fontSize(20).text('Chama Member Statement', {
+      align: 'center',
     });
 
-    if (totalContributionsElement) {
-      totalContributionsElement.innerText = formatCurrency(total);
-    }
+    doc.moveDown();
 
-    if (!contributionsContainer) return;
+    doc.fontSize(14).text(`Name: ${member.full_name}`);
+    doc.text(`Phone: ${member.phone}`);
 
-    contributionsContainer.innerHTML = contributions
-      .map(
-        (item) => `
-      <div class="bg-gray-50 border rounded-lg p-4">
+    doc.moveDown();
 
-        <h3 class="font-bold">${item.full_name}</h3>
+    doc.fontSize(16).text('Contributions');
 
-        <p>
-          Amount: ${formatCurrency(item.amount)}
-        </p>
+    contributionsResult.rows.forEach((contribution) => {
+      doc
+        .fontSize(12)
+        .text(
+          `${contribution.contribution_month} ${contribution.contribution_year} - KES ${contribution.amount}`
+        );
+    });
 
-        <p>
-          Month: ${item.contribution_month} ${item.contribution_year}
-        </p>
+    doc.moveDown();
 
-        <p>
-          Payment Date: ${formatDate(item.payment_date)}
-        </p>
+    doc.fontSize(16).text('Loans');
 
-      </div>
-    `
-      )
-      .join('');
+    loansResult.rows.forEach((loan) => {
+      doc
+        .fontSize(12)
+        .text(
+          `Loan: KES ${loan.amount} | Balance: KES ${loan.remaining_balance} | Status: ${loan.status}`
+        );
+    });
+
+    doc.end();
   } catch (error) {
-    console.log(error);
+    console.error(error.message);
+
+    res.status(500).json({
+      message: 'Server error',
+    });
   }
-}
+};
