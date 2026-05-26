@@ -1,28 +1,18 @@
-const express = require("express");
-
+const express = require('express');
 const router = express.Router();
 
-const verifyToken =
-    require("../middleware/authMiddleware");
-const authorizeRoles =
-    require("../middleware/roleMiddleware");
+const verifyToken = require('../middleware/authMiddleware');
+const authorizeRoles = require('../middleware/roleMiddleware');
 
 const {
-    addContribution,
-    getContributions
-} = require("../controllers/contributionController");
+  addContribution,
+  getContributions,
+} = require('../controllers/contributionController');
 
-router.post(
-    "/",
-    verifyToken,
-    authorizeRoles("admin"),
-    addContribution
-);
+// Create contribution (admin only)
+router.post('/', verifyToken, authorizeRoles('Admin'), addContribution);
 
-router.get(
-    "/",
-    verifyToken,
-    getContributions
-);
+// Get contributions (any authenticated user)
+router.get('/', verifyToken, getContributions);
 
 module.exports = router;

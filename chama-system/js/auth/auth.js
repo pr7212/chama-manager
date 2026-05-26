@@ -1,6 +1,6 @@
 function requireAuth() {
-  if (!localStorage.getItem("token")) {
-    window.location.href = "login.html";
+  if (!localStorage.getItem('token')) {
+    window.location.href = 'login.html';
 
     return false;
   }
@@ -9,6 +9,7 @@ function requireAuth() {
 }
 
 function logout() {
-  localStorage.removeItem("token");
-  window.location.href = "login.html";
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.location.href = 'login.html';
 }

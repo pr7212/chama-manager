@@ -3,6 +3,9 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
 const pool = require('./config/db');
 
 const authRoutes = require('./routes/authRoutes');
@@ -13,48 +16,55 @@ const statementRoutes = require('./routes/statementRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const fineRoutes = require('./routes/fineRoutes');
 const exportRoutes = require('./routes/exportRoutes');
-const verifyToken = require('./middleware/authMiddleware');
 
+const verifyToken = require('./middleware/authMiddleware');
 const errorHandler = require('./middleware/errorMiddleware');
 
 const app = express();
 
-// Security / production hardening
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-
-const corsOptions = {
-  origin: ['http://localhost:5500', 'https://yourdomain.com'],
-  credentials: false,
-};
-
+/**
+ * SECURITY
+ */
 app.use(helmet());
-app.use(cors(corsOptions));
+
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:5500',
+    credentials: false,
+  })
+);
+
 app.use(express.json({ limit: '1mb' }));
 
-// Basic rate limiting
+/**
+ * GLOBAL RATE LIMIT
+ */
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
-    standardHeaders: true,
-    legacyHeaders: false,
   })
 );
 
-// Stricter rate limit for login route
+/**
+ * LOGIN RATE LIMIT (FIXED: must be applied on route, not path-only middleware)
+ */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  message: 'Too many login attempts',
-  standardHeaders: true,
-  legacyHeaders: false,
+  message: 'Too many login attempts, try again later',
 });
 
+/**
+ * STATIC FILES
+ */
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/css', express.static(path.join(__dirname, '../css')));
 app.use('/js', express.static(path.join(__dirname, '../js')));
 
+/**
+ * REQUEST LOGGER
+ */
 app.use((req, res, next) => {
   if (process.env.NODE_ENV !== 'production') {
     console.log(`${req.method} ${req.url}`);
@@ -62,11 +72,19 @@ app.use((req, res, next) => {
   next();
 });
 
+/**
+ * DB CHECK
+ */
 pool
   .query('SELECT NOW()')
   .then(() => console.log('Database connected'))
-  .catch((err) => console.error(err.message));
+  .catch((err) => {
+    console.error('Database connection failed:', err.message);
+  });
 
+/**
+ * ROUTES
+ */
 app.get('/', (req, res) => {
   res.send('Chama Manager API Running...');
 });
@@ -89,9 +107,21 @@ app.get('/api/dashboard', verifyToken, (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
-
+/**
+ * DATABASE TABLES
+ */
 const createTables = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      full_name VARCHAR(100) NOT NULL,
+      phone VARCHAR(30) NOT NULL UNIQUE,
+      password VARCHAR(255) NOT NULL,
+      role VARCHAR(50) NOT NULL DEFAULT 'admin',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS members (
       id SERIAL PRIMARY KEY,
@@ -99,23 +129,17 @@ const createTables = async () => {
       phone VARCHAR(30) NOT NULL UNIQUE,
       national_id VARCHAR(50),
       email VARCHAR(120),
-      role VARCHAR(50) NOT NULL DEFAULT 'Member',
-      status VARCHAR(20) NOT NULL DEFAULT 'Active',
+      role VARCHAR(50) DEFAULT 'Member',
+      status VARCHAR(20) DEFAULT 'Active',
       created_by INTEGER,
-      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
-  `);
-
-  await pool.query(`
-    ALTER TABLE members
-    ADD COLUMN IF NOT EXISTS national_id VARCHAR(50)
   `);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS contributions (
       id SERIAL PRIMARY KEY,
-      member_id INTEGER REFERENCES members(id)
-      ON DELETE CASCADE,
+      member_id INTEGER REFERENCES members(id) ON DELETE CASCADE,
       amount DECIMAL(10,2) NOT NULL,
       contribution_month VARCHAR(20),
       contribution_year INTEGER,
@@ -128,8 +152,7 @@ const createTables = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS loans (
       id SERIAL PRIMARY KEY,
-      member_id INTEGER REFERENCES members(id)
-      ON DELETE CASCADE,
+      member_id INTEGER REFERENCES members(id) ON DELETE CASCADE,
       amount DECIMAL(10,2) NOT NULL,
       interest_rate DECIMAL(5,2) NOT NULL,
       total_amount DECIMAL(10,2) NOT NULL,
@@ -145,8 +168,7 @@ const createTables = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS loan_payments (
       id SERIAL PRIMARY KEY,
-      loan_id INTEGER REFERENCES loans(id)
-      ON DELETE CASCADE,
+      loan_id INTEGER REFERENCES loans(id) ON DELETE CASCADE,
       amount DECIMAL(10,2) NOT NULL,
       payment_date DATE DEFAULT CURRENT_DATE,
       recorded_by INTEGER REFERENCES users(id),
@@ -158,7 +180,7 @@ const createTables = async () => {
     CREATE TABLE IF NOT EXISTS audit_logs (
       id SERIAL PRIMARY KEY,
       user_id INTEGER REFERENCES users(id),
-      action VARCHAR(100) NOT NULL,
+      action VARCHAR(100),
       entity_type VARCHAR(50),
       entity_id INTEGER,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -169,10 +191,10 @@ const createTables = async () => {
     CREATE TABLE IF NOT EXISTS notifications (
       id SERIAL PRIMARY KEY,
       user_id INTEGER REFERENCES users(id),
-      channel VARCHAR(30) NOT NULL DEFAULT 'in_app',
-      type VARCHAR(60) NOT NULL,
-      title VARCHAR(120) NOT NULL,
-      message TEXT NOT NULL,
+      channel VARCHAR(30) DEFAULT 'in_app',
+      type VARCHAR(60),
+      title VARCHAR(120),
+      message TEXT,
       related_entity_type VARCHAR(50),
       related_entity_id INTEGER,
       read_at TIMESTAMP,
@@ -183,10 +205,9 @@ const createTables = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS fines (
       id SERIAL PRIMARY KEY,
-      name VARCHAR(120) NOT NULL,
-      amount DECIMAL(10,2) NOT NULL,
-      rule_type VARCHAR(50) DEFAULT 'manual',
-      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      name VARCHAR(120),
+      amount DECIMAL(10,2),
+      is_active BOOLEAN DEFAULT TRUE,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -196,7 +217,7 @@ const createTables = async () => {
       id SERIAL PRIMARY KEY,
       fine_id INTEGER REFERENCES fines(id) ON DELETE CASCADE,
       member_id INTEGER REFERENCES members(id) ON DELETE CASCADE,
-      amount DECIMAL(10,2) NOT NULL,
+      amount DECIMAL(10,2),
       payment_date DATE DEFAULT CURRENT_DATE,
       recorded_by INTEGER REFERENCES users(id),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -208,26 +229,24 @@ const createTables = async () => {
       id SERIAL PRIMARY KEY,
       fine_id INTEGER REFERENCES fines(id) ON DELETE CASCADE,
       member_id INTEGER REFERENCES members(id) ON DELETE CASCADE,
-      outstanding_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+      outstanding_amount DECIMAL(10,2) DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (fine_id, member_id)
     )
   `);
-
-  await pool.query(
-    `
-      ALTER TABLE outstanding_fines
-      ADD CONSTRAINT IF NOT EXISTS outstanding_fines_unique
-      UNIQUE (fine_id, member_id)
-    `
-  );
 };
 
 createTables()
-  .then(() => console.log('Database tables ready'))
-  .catch((err) => console.error('Database table setup failed:', err.message));
+  .then(() => console.log('Database ready'))
+  .catch((err) => console.error('DB setup failed:', err.message));
 
+/**
+ * ERROR HANDLER (must be last)
+ */
 app.use(errorHandler);
+
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

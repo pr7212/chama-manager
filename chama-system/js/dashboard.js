@@ -1,37 +1,62 @@
 let contributionChart = null;
 
 async function renderContributionChart() {
-  const contributions = await apiRequest('/contributions');
+  try {
+    const contributions = await apiRequest('/contributions');
 
-  const labels = contributions.map((item) => item.contribution_month);
+    if (!Array.isArray(contributions) || contributions.length === 0) {
+      return;
+    }
 
-  const amounts = contributions.map((item) => Number(item.amount));
+    const labels = contributions.map(
+      (item) => item.contribution_month || 'Unknown'
+    );
 
-  const ctx = document.getElementById('contributionChart');
+    const amounts = contributions.map((item) => Number(item.amount) || 0);
 
-  if (!ctx) return;
+    const ctx = document.getElementById('contributionChart');
 
-  if (contributionChart) {
-    contributionChart.destroy();
-  }
+    if (!ctx) return;
 
-  contributionChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: 'Contributions',
-          data: amounts,
+    if (contributionChart) {
+      contributionChart.destroy();
+    }
+
+    contributionChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Contributions (KES)',
+            data: amounts,
+            backgroundColor: '#2563eb',
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            display: true,
+          },
         },
-      ],
-    },
-  });
+        scales: {
+          y: {
+            beginAtZero: true,
+          },
+        },
+      },
+    });
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 if (requireAuth()) {
   loadMembers();
-  loadContributions();
   loadLoans();
-  renderContributionChart();
+
+  loadContributions().then(() => renderContributionChart());
 }

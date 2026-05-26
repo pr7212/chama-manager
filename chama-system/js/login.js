@@ -1,59 +1,57 @@
-const loginForm = document.getElementById("loginForm");
+const loginForm = document.getElementById('loginForm');
 
-loginForm.addEventListener("submit", async (e) => {
-
+if (loginForm) {
+  loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const phone = document.getElementById("phone").value;
-    const password = document.getElementById("password").value;
-    const button = loginForm.querySelector("button");
+    const phone = document.getElementById('phone').value.trim();
 
-    button.innerText = "Logging in...";
+    const password = document.getElementById('password').value.trim();
+
+    const button = loginForm.querySelector('button');
+
+    if (!phone || !password) {
+      alert('Phone and password required');
+      return;
+    }
+
+    button.innerText = 'Logging in...';
     button.disabled = true;
 
     try {
+      const response = await fetch(`${CONFIG.API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone,
+          password,
+        }),
+      });
 
-        const response = await fetch(
-            `${CONFIG.API_URL}/auth/login`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    phone,
-                    password
-                })
-            }
-        );
+      const data = await response.json();
 
-        const data = await response.json();
+      if (response.ok) {
+        localStorage.setItem('token', data.token);
 
-        console.log(data);
-
-        if (response.ok) {
-
-            localStorage.setItem("token", data.token);
-
-            alert("Login successful");
-
-            window.location.href = "dashboard.html";
-
-        } else {
-
-            alert(data.message);
-
+        if (data.user) {
+          localStorage.setItem('user', JSON.stringify(data.user));
         }
 
+        alert('Login successful');
+
+        window.location.href = 'dashboard.html';
+      } else {
+        alert(data.message || 'Login failed');
+      }
     } catch (error) {
+      console.log(error);
 
-        console.log(error);
-
+      alert('Network error');
     } finally {
-
-        button.innerText = "Login";
-        button.disabled = false;
-
+      button.innerText = 'Login';
+      button.disabled = false;
     }
-
-});
+  });
+}

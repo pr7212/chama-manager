@@ -7,7 +7,14 @@ exports.issueLoan = async (req, res) => {
   try {
     const { member_id, amount, interest_rate, due_date } = req.body;
 
-    const created_by = req.user.id;
+    const created_by = req.user?.id;
+
+    if (!created_by) {
+      return res.status(401).json({
+        message: 'Unauthorized',
+      });
+    }
+
     const loanAmount = Number(amount);
     const loanInterestRate = Number(interest_rate);
 
@@ -36,19 +43,18 @@ exports.issueLoan = async (req, res) => {
 
     const result = await pool.query(
       `
-            INSERT INTO loans
-            (
-                member_id,
-                amount,
-                interest_rate,
-                total_amount,
-                remaining_balance,
-                due_date,
-                created_by
-            )
-            VALUES ($1,$2,$3,$4,$5,$6,$7)
-            RETURNING *
-            `,
+      INSERT INTO loans (
+        member_id,
+        amount,
+        interest_rate,
+        total_amount,
+        remaining_balance,
+        due_date,
+        created_by
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      RETURNING *
+      `,
       [
         member_id,
         loanAmount,
@@ -60,40 +66,57 @@ exports.issueLoan = async (req, res) => {
       ]
     );
 
+    const loan = result.rows[0];
+
     await logAudit({
-      user_id: req.user.id,
+      user_id: created_by,
       action: 'Issued loan',
       entity_type: 'loan',
-      entity_id: result.rows[0].id,
+      entity_id: loan.id,
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'Loan issued',
-      loan: result.rows[0],
+      loan,
     });
   } catch (error) {
     console.error(error.message);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: 'Server error',
     });
   }
 };
 
+// RECORD PAYMENT
 exports.recordLoanPayment = async (req, res) => {
   try {
     const { loan_id, amount } = req.body;
+    const recorded_by = req.user?.id;
 
-    const recorded_by = req.user.id;
+    if (!recorded_by) {
+      return res.status(401).json({
+        message: 'Unauthorized',
+      });
+    }
 
-    // Get current loan
-    const loanResult = await pool.query(
-      `
-            SELECT * FROM loans
-            WHERE id = $1
-            `,
-      [loan_id]
-    );
+    const paymentAmount = Number(amount);
+
+    if (!loan_id || !amount) {
+      return res.status(400).json({
+        message: 'Loan ID and amount required',
+      });
+    }
+
+    if (Number.isNaN(paymentAmount) || paymentAmount <= 0) {
+      return res.status(400).json({
+        message: 'Payment amount invalid',
+      });
+    }
+
+    const loanResult = await pool.query(`SELECT * FROM loans WHERE id = $1`, [
+      loan_id,
+    ]);
 
     if (loanResult.rows.length === 0) {
       return res.status(404).json({
@@ -102,13 +125,6 @@ exports.recordLoanPayment = async (req, res) => {
     }
 
     const loan = loanResult.rows[0];
-    const paymentAmount = Number(amount);
-
-    if (!amount || Number.isNaN(paymentAmount) || paymentAmount <= 0) {
-      return res.status(400).json({
-        message: 'Payment amount invalid',
-      });
-    }
 
     if (paymentAmount > Number(loan.remaining_balance)) {
       return res.status(400).json({
@@ -116,79 +132,66 @@ exports.recordLoanPayment = async (req, res) => {
       });
     }
 
-    const newAmountPaid = Number(loan.amount_paid) + paymentAmount;
+    const newAmountPaid = Number(loan.amount_paid || 0) + paymentAmount;
 
-    const newBalance = Math.max(
-      0,
-      Number(loan.remaining_balance) - paymentAmount
-    );
+    const newBalance = Number(loan.remaining_balance) - paymentAmount;
 
-    let status = 'active';
+    const status = newBalance <= 0 ? 'completed' : 'active';
 
-    if (newBalance <= 0) {
-      status = 'completed';
-    }
-
-    // Save payment
     await pool.query(
       `
-            INSERT INTO loan_payments
-            (
-                loan_id,
-                amount,
-                recorded_by
-            )
-            VALUES ($1,$2,$3)
-            `,
+      INSERT INTO loan_payments (
+        loan_id,
+        amount,
+        recorded_by
+      )
+      VALUES ($1,$2,$3)
+      `,
       [loan_id, paymentAmount, recorded_by]
     );
 
-    // Update loan
     await pool.query(
       `
-            UPDATE loans
-            SET
-                amount_paid = $1,
-                remaining_balance = $2,
-                status = $3
-            WHERE id = $4
-            `,
+      UPDATE loans
+      SET amount_paid = $1,
+          remaining_balance = $2,
+          status = $3
+      WHERE id = $4
+      `,
       [newAmountPaid, newBalance, status, loan_id]
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       message: 'Payment recorded',
     });
   } catch (error) {
     console.error(error.message);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: 'Server error',
     });
   }
 };
 
+// GET LOANS
 exports.getLoans = async (req, res) => {
   try {
     const result = await pool.query(
       `
-            SELECT
-                loans.*,
-                members.full_name
-            FROM loans
-
-            JOIN members
-            ON loans.member_id = members.id
-
-            ORDER BY loans.created_at DESC
-            `
+      SELECT
+        loans.*,
+        members.full_name
+      FROM loans
+      JOIN members ON loans.member_id = members.id
+      ORDER BY loans.created_at DESC
+      `
     );
 
-    res.status(200).json(result.rows);
+    return res.status(200).json(result.rows);
   } catch (error) {
     console.error(error.message);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: 'Server error',
     });
   }

@@ -1,13 +1,16 @@
 const errorHandler = (err, req, res, next) => {
-  // Avoid leaking stack traces in production.
+  // Log error (safe for dev + prod)
   if (process.env.NODE_ENV !== 'production') {
-    console.error(err.stack);
+    console.error('Error Stack:', err.stack);
   } else {
-    console.error(err);
+    console.error('Error:', err.message);
   }
 
-  res.status(500).json({
-    message: 'Internal server error',
+  // Default status code (important improvement)
+  const statusCode = err.statusCode || 500;
+
+  res.status(statusCode).json({
+    message: err.message || 'Internal server error',
   });
 };
 

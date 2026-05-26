@@ -1,23 +1,20 @@
-const authorizeRoles =
-    (...roles) => {
+const authorizeRoles = (...roles) => {
+  return (req, res, next) => {
+    // Safety check: req.user might not exist if auth middleware is skipped
+    if (!req.user || !req.user.role) {
+      return res.status(401).json({
+        message: 'Unauthorized. User not authenticated.',
+      });
+    }
 
-    return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        message: 'Access denied. Insufficient permissions.',
+      });
+    }
 
-        if (
-            !roles.includes(req.user.role)
-        ) {
-
-            return res.status(403).json({
-                message:
-                "Access denied"
-            });
-
-        }
-
-        next();
-
-    };
-
+    next();
+  };
 };
 
 module.exports = authorizeRoles;

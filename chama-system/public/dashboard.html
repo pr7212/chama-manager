@@ -2,14 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
     <title>Chama Dashboard</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Auth guard (prevents flicker of dashboard before redirect) -->
+    <script>
+      if (!localStorage.getItem('token')) {
+        window.location.href = 'login.html';
+      }
+    </script>
   </head>
 
   <body class="bg-gray-100">
@@ -17,7 +21,10 @@
     <nav class="bg-blue-600 text-white p-4 flex justify-between">
       <h1 class="text-2xl font-bold">Chama Manager</h1>
 
-      <button onclick="logout()" class="bg-red-500 px-4 py-2 rounded">
+      <button
+        onclick="window.Auth.logout()"
+        class="bg-red-500 px-4 py-2 rounded"
+      >
         Logout
       </button>
     </nav>
@@ -28,19 +35,16 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div class="bg-white p-6 rounded-lg shadow">
           <h2 class="text-gray-500">Total Members</h2>
-
           <p id="totalMembers" class="text-3xl font-bold">0</p>
         </div>
 
         <div class="bg-white p-6 rounded-lg shadow">
           <h2 class="text-gray-500">Total Contributions</h2>
-
           <p id="totalContributions" class="text-3xl font-bold">KES 0</p>
         </div>
 
         <div class="bg-white p-6 rounded-lg shadow">
           <h2 class="text-gray-500">Active Loans</h2>
-
           <p id="activeLoans" class="text-3xl font-bold">0</p>
         </div>
       </div>
@@ -56,14 +60,12 @@
             placeholder="Full Name"
             class="border p-3 rounded"
           />
-
           <input
             type="text"
             id="phone"
             placeholder="Phone Number"
             class="border p-3 rounded"
           />
-
           <input
             type="text"
             id="national_id"
@@ -85,13 +87,17 @@
       <div class="bg-white p-6 rounded-lg shadow mb-8">
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-xl font-bold">Notifications</h2>
+
           <span
             id="notifBadge"
             class="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded hidden"
-            >0</span
           >
+            0
+          </span>
         </div>
+
         <ul id="notificationsList" class="space-y-2 text-sm"></ul>
+
         <div id="notificationsEmpty" class="text-gray-500 text-sm mt-3 hidden">
           No notifications
         </div>
@@ -113,7 +119,7 @@
 
         <form id="contributionForm" class="grid md:grid-cols-4 gap-4">
           <select id="memberSelect" class="border p-3 rounded">
-            <option>Select Member</option>
+            <option value="">Select Member</option>
           </select>
 
           <input
@@ -122,14 +128,12 @@
             placeholder="Amount"
             class="border p-3 rounded"
           />
-
           <input
             type="text"
             id="month"
             placeholder="Month"
             class="border p-3 rounded"
           />
-
           <input
             type="number"
             id="year"
@@ -152,6 +156,7 @@
       </div>
     </div>
 
+    <!-- SCRIPTS -->
     <script src="../js/config.js"></script>
     <script src="../js/api/api.js"></script>
     <script src="../js/auth/auth.js"></script>

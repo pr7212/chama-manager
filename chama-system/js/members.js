@@ -12,19 +12,25 @@ const userBadge = document.getElementById('userBadge');
 
 let members = [];
 
-const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (character) => ({
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#039;',
-}[character]));
+const escapeHtml = (value) =>
+  String(value || '').replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;',
+      })[character]
+  );
 
 const setUserBadge = () => {
   const user = window.Auth.getCurrentUser();
 
   if (!user) {
-    userBadge.innerHTML = '<strong>Signed in</strong><span>Chama account</span>';
+    userBadge.innerHTML =
+      '<strong>Signed in</strong><span>Chama account</span>';
     return;
   }
 
@@ -35,51 +41,63 @@ const setUserBadge = () => {
 };
 
 const setStatus = (message, type = '') => {
+  if (!formStatus) return;
   formStatus.textContent = message;
   formStatus.className = `status-message ${type}`;
 };
 
 const getVisibleMembers = () => {
-  const term = memberSearch.value.trim().toLowerCase();
+  const term = memberSearch?.value.trim().toLowerCase() || '';
 
-  if (!term) {
-    return members;
-  }
+  if (!term) return members;
 
-  return members.filter((member) => (
-    member.full_name.toLowerCase().includes(term)
-    || member.phone.toLowerCase().includes(term)
-    || (member.national_id || '').toLowerCase().includes(term)
-    || (member.email || '').toLowerCase().includes(term)
-    || member.role.toLowerCase().includes(term)
-    || member.status.toLowerCase().includes(term)
-  ));
+  return members.filter(
+    (member) =>
+      member.full_name.toLowerCase().includes(term) ||
+      member.phone.toLowerCase().includes(term) ||
+      (member.national_id || '').toLowerCase().includes(term) ||
+      (member.email || '').toLowerCase().includes(term) ||
+      member.role.toLowerCase().includes(term) ||
+      member.status.toLowerCase().includes(term)
+  );
 };
 
 const renderMembers = () => {
-  const visibleMembers = getVisibleMembers();
-  emptyState.hidden = visibleMembers.length > 0;
+  if (!membersTableBody) return;
 
-  membersTableBody.innerHTML = visibleMembers.map((member) => `
-    <tr>
-      <td><strong>${escapeHtml(member.full_name)}</strong></td>
-      <td>${escapeHtml(member.phone)}</td>
-      <td>${escapeHtml(member.national_id || '-')}</td>
-      <td>${escapeHtml(member.email || '-')}</td>
-      <td>${escapeHtml(member.role)}</td>
-      <td><span class="badge ${escapeHtml(member.status.toLowerCase())}">${escapeHtml(member.status)}</span></td>
-    </tr>
-  `).join('');
+  const visibleMembers = getVisibleMembers();
+
+  if (emptyState) {
+    emptyState.hidden = visibleMembers.length > 0;
+  }
+
+  membersTableBody.innerHTML = visibleMembers
+    .map(
+      (member) => `
+      <tr>
+        <td><strong>${escapeHtml(member.full_name)}</strong></td>
+        <td>${escapeHtml(member.phone)}</td>
+        <td>${escapeHtml(member.national_id || '-')}</td>
+        <td>${escapeHtml(member.email || '-')}</td>
+        <td>${escapeHtml(member.role)}</td>
+        <td>
+          <span class="badge ${escapeHtml(member.status.toLowerCase())}">
+            ${escapeHtml(member.status)}
+          </span>
+        </td>
+      </tr>
+    `
+    )
+    .join('');
 };
 
 const loadMembers = async () => {
   try {
     setStatus('Loading members...');
-    const response = await window.Auth.authFetch('/api/members');
 
-    if (!response) {
-      return;
-    }
+    const response = await window.Auth.authFetch('/members');
+
+    if (!response) return;
 
     const data = await response.json();
 
@@ -101,28 +119,30 @@ const addMember = async (event) => {
   event.preventDefault();
 
   const formData = new FormData(memberForm);
+
   const payload = {
-    full_name: formData.get('full_name').trim(),
-    phone: formData.get('phone').trim(),
-    national_id: formData.get('national_id').trim(),
-    email: formData.get('email').trim(),
+    full_name: formData.get('full_name')?.trim(),
+    phone: formData.get('phone')?.trim(),
+    national_id: formData.get('national_id')?.trim(),
+    email: formData.get('email')?.trim(),
     role: formData.get('role'),
     status: formData.get('status'),
   };
 
-  saveMemberBtn.disabled = true;
-  saveMemberBtn.textContent = 'Saving...';
+  if (saveMemberBtn) {
+    saveMemberBtn.disabled = true;
+    saveMemberBtn.textContent = 'Saving...';
+  }
+
   setStatus('Saving member...');
 
   try {
-    const response = await window.Auth.authFetch('/api/members', {
+    const response = await window.Auth.authFetch('/members', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
 
-    if (!response) {
-      return;
-    }
+    if (!response) return;
 
     const data = await response.json();
 
@@ -139,15 +159,21 @@ const addMember = async (event) => {
     console.log(error);
     setStatus('Unable to connect to the server', 'error');
   } finally {
-    saveMemberBtn.disabled = false;
-    saveMemberBtn.textContent = 'Save member';
+    if (saveMemberBtn) {
+      saveMemberBtn.disabled = false;
+      saveMemberBtn.textContent = 'Save member';
+    }
   }
 };
 
-memberForm.addEventListener('submit', addMember);
-memberSearch.addEventListener('input', renderMembers);
-refreshMembersBtn.addEventListener('click', loadMembers);
-logoutBtn.addEventListener('click', window.Auth.logout);
+/* SAFE EVENT BINDING */
+if (memberForm) memberForm.addEventListener('submit', addMember);
+
+if (memberSearch) memberSearch.addEventListener('input', renderMembers);
+
+if (refreshMembersBtn) refreshMembersBtn.addEventListener('click', loadMembers);
+
+if (logoutBtn) logoutBtn.addEventListener('click', window.Auth.logout);
 
 setUserBadge();
 loadMembers();

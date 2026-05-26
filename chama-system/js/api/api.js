@@ -1,42 +1,46 @@
-const API_URL =
-    CONFIG.API_URL;
+const API_URL = CONFIG.API_URL;
 
-const token =
-    localStorage.getItem("token");
+function getToken() {
+  return localStorage.getItem('token');
+}
 
-async function apiRequest(
-    endpoint,
-    method = "GET",
-    body = null
-) {
+async function apiRequest(endpoint, method = 'GET', body = null) {
+  const token = getToken();
 
-    const options = {
+  if (!token) {
+    window.location.href = 'login.html';
+    return null;
+  }
 
-        method,
+  const options = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  };
 
-        headers: {
-            "Content-Type":
-                "application/json",
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
 
-            Authorization:
-                `Bearer ${token}`
-        }
+  const response = await fetch(`${API_URL}${endpoint}`, options);
 
-    };
+  if (response.status === 401 || response.status === 403) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = 'login.html';
+    return null;
+  }
 
-    if (body) {
+  const data = await response.json();
 
-        options.body =
-            JSON.stringify(body);
+  if (!response.ok) {
+    const err = new Error(data.message || 'Request failed');
+    err.status = response.status;
+    err.data = data;
+    throw err;
+  }
 
-    }
-
-    const response =
-        await fetch(
-            `${API_URL}${endpoint}`,
-            options
-        );
-
-    return response.json();
-
+  return data;
 }

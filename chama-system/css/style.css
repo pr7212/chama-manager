@@ -22,7 +22,7 @@ body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
-  font-family: "Outfit", Arial, sans-serif;
+  font-family: 'Outfit', Arial, sans-serif;
 }
 
 a {

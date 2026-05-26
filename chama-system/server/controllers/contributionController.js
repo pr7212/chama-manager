@@ -5,17 +5,24 @@ const notificationService = require('../services/notificationService');
 // ADD CONTRIBUTION
 exports.addContribution = async (req, res) => {
   let client;
+
   try {
     const { member_id, amount, contribution_month, contribution_year } =
       req.body;
 
-    const recorded_by = req.user.id;
+    const recorded_by = req.user?.id;
+
+    if (!recorded_by) {
+      return res.status(401).json({
+        message: 'Unauthorized',
+      });
+    }
+
     const contributionAmount = Number(amount);
-    const contributionMonth = contribution_month
-      ? contribution_month.trim()
-      : '';
+    const contributionMonth = (contribution_month || '').trim();
     const contributionYear = Number(contribution_year);
 
+    // VALIDATION FIX (strict)
     if (!member_id || !amount || !contributionMonth || !contribution_year) {
       return res.status(400).json({
         message: 'All contribution fields required',
@@ -28,7 +35,7 @@ exports.addContribution = async (req, res) => {
       Number.isNaN(contributionYear)
     ) {
       return res.status(400).json({
-        message: 'Amount must be greater than 0',
+        message: 'Invalid amount or year',
       });
     }
 
@@ -39,37 +46,34 @@ exports.addContribution = async (req, res) => {
 
       const existingContribution = await client.query(
         `
-                SELECT * FROM contributions
-                WHERE
-                    member_id = $1
-                AND
-                    contribution_month = $2
-                AND
-                    contribution_year = $3
-                `,
+        SELECT id FROM contributions
+        WHERE member_id = $1
+        AND contribution_month = $2
+        AND contribution_year = $3
+        `,
         [member_id, contributionMonth, contributionYear]
       );
 
       if (existingContribution.rows.length > 0) {
         await client.query('ROLLBACK');
-        return res.status(400).json({
+
+        return res.status(409).json({
           message: 'Contribution already recorded for this month',
         });
       }
 
       const result = await client.query(
         `
-            INSERT INTO contributions
-            (
-                member_id,
-                amount,
-                contribution_month,
-                contribution_year,
-                recorded_by
-            )
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING *
-            `,
+        INSERT INTO contributions (
+          member_id,
+          amount,
+          contribution_month,
+          contribution_year,
+          recorded_by
+        )
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+        `,
         [
           member_id,
           contributionAmount,
@@ -79,52 +83,48 @@ exports.addContribution = async (req, res) => {
         ]
       );
 
+      const contribution = result.rows[0];
+
       await logAudit({
         client,
-        user_id: req.user.id,
+        user_id: recorded_by,
         action: 'Recorded contribution',
         entity_type: 'contribution',
-        entity_id: result.rows[0].id,
+        entity_id: contribution.id,
       });
 
       await client.query('COMMIT');
 
-      // Create in-app notification for the user who recorded it (manual until we add role-based recipients)
-      try {
-        await notificationService.createNotification({
-          userId: req.user.id,
+      // Notification (non-blocking safe)
+      notificationService
+        .createNotification({
+          userId: recorded_by,
           channel: 'in_app',
           type: 'contribution_received',
-          title: 'Contribution received',
-          message: `Contribution for ${contributionMonth} ${contributionYear} recorded: KES ${contributionAmount}`,
+          title: 'Contribution recorded',
+          message: `KES ${contributionAmount} saved for ${contributionMonth} ${contributionYear}`,
           relatedEntityType: 'contribution',
-          relatedEntityId: result.rows[0].id,
-        });
-      } catch (notifErr) {
-        console.error('Notification create failed:', notifErr.message);
-      }
+          relatedEntityId: contribution.id,
+        })
+        .catch((err) => console.error('Notification error:', err.message));
 
-      res.status(201).json({
+      return res.status(201).json({
         message: 'Contribution recorded',
-        contribution: result.rows[0],
+        contribution,
       });
     } catch (txErr) {
-      // If contribution insert succeeded but audit log fails, rollback everything.
-      try {
-        await client.query('ROLLBACK');
-      } catch (rollbackErr) {
-        console.error('Rollback failed:', rollbackErr.message);
-      }
+      await client.query('ROLLBACK').catch(() => {});
 
-      console.error(txErr.message);
-      res.status(500).json({
+      console.error('Transaction error:', txErr.message);
+
+      return res.status(500).json({
         message: 'Server error',
       });
     }
   } catch (error) {
     console.error(error.message);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: 'Server error',
     });
   } finally {
@@ -137,23 +137,20 @@ exports.getContributions = async (req, res) => {
   try {
     const result = await pool.query(
       `
-            SELECT
-                contributions.*,
-                members.full_name
-            FROM contributions
-
-            JOIN members
-            ON contributions.member_id = members.id
-
-            ORDER BY contributions.created_at DESC
-            `
+      SELECT
+        contributions.*,
+        members.full_name
+      FROM contributions
+      JOIN members ON contributions.member_id = members.id
+      ORDER BY contributions.created_at DESC
+      `
     );
 
-    res.status(200).json(result.rows);
+    return res.status(200).json(result.rows);
   } catch (error) {
     console.error(error.message);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: 'Server error',
     });
   }

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contributions - Chama Manager</title>
+
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- OPTIONAL: protect page early -->
+    <script>
+      if (!localStorage.getItem('token')) {
+        window.location.href = 'login.html';
+      }
+    </script>
+  </head>
+
+  <body>
+    <div class="app-shell">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">CM</div>
+          <span>Chama Manager</span>
+        </div>
+
+        <nav class="nav-links">
+          <a class="nav-link" href="dashboard.html">Dashboard</a>
+          <a class="nav-link active" href="contributions.html">Contributions</a>
+          <a class="nav-link" href="members.html">Members</a>
+          <a class="nav-link" href="loans.html">Loans</a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <button id="logoutBtn" class="logout-button">Logout</button>
+        </div>
+      </aside>
+
+      <!-- MAIN CONTENT -->
+      <main class="content">
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">Finance</p>
+            <h1>Contributions</h1>
+          </div>
+
+          <div class="user-badge" id="userBadge">
+            <strong>User</strong>
+            <span>Loading...</span>
+          </div>
+        </div>
+
+        <!-- STATS -->
+        <div class="metric-grid">
+          <div class="metric">
+            <span>Total Contributions</span>
+            <strong id="totalContributions">KES 0</strong>
+          </div>
+        </div>
+
+        <!-- CHART -->
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Contribution Trend</h2>
+          </div>
+          <div class="panel-body">
+            <canvas id="contributionChart"></canvas>
+          </div>
+        </div>
+
+        <br />
+
+        <!-- FORM + LIST -->
+        <div class="member-page-grid">
+          <!-- FORM -->
+          <div class="panel">
+            <div class="panel-header">
+              <h2>Add Contribution</h2>
+            </div>
+
+            <div class="panel-body">
+              <form id="contributionForm" class="form-grid">
+                <div class="field">
+                  <label for="memberSelect">Member</label>
+                  <select id="memberSelect"></select>
+                </div>
+
+                <div class="field">
+                  <label for="amount">Amount</label>
+                  <input id="amount" type="number" placeholder="Enter amount" />
+                </div>
+
+                <div class="field">
+                  <label for="month">Month</label>
+                  <input id="month" type="text" placeholder="e.g. January" />
+                </div>
+
+                <div class="field">
+                  <label for="year">Year</label>
+                  <input id="year" type="number" placeholder="2026" />
+                </div>
+
+                <div class="form-actions">
+                  <button class="primary-button" type="submit">Save</button>
+                </div>
+
+                <div id="statusMessage" class="status-message"></div>
+              </form>
+            </div>
+          </div>
+
+          <!-- LIST -->
+          <div class="panel">
+            <div class="panel-header">
+              <h2>Recent Contributions</h2>
+            </div>
+
+            <div class="panel-body">
+              <div id="contributionsContainer" class="member-list"></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="auth.js"></script>
+    <script src="api.js"></script>
+    <script src="contributions.js"></script>
+  </body>
+</html>

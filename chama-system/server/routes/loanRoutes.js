@@ -1,36 +1,33 @@
-const express = require("express");
-
+const express = require('express');
 const router = express.Router();
 
-const verifyToken =
-    require("../middleware/authMiddleware");
-const authorizeRoles =
-    require("../middleware/roleMiddleware");
+const verifyToken = require('../middleware/authMiddleware');
+const authorizeRoles = require('../middleware/roleMiddleware');
 
 const {
-    issueLoan,
-    recordLoanPayment,
-    getLoans
-} = require("../controllers/loanController");
+  issueLoan,
+  recordLoanPayment,
+  getLoans,
+} = require('../controllers/loanController');
 
+/**
+ * Issue a loan (admin only)
+ */
+router.post('/', verifyToken, authorizeRoles('admin'), issueLoan);
+
+/**
+ * Record loan repayment (admin only)
+ */
 router.post(
-    "/",
-    verifyToken,
-    authorizeRoles("admin"),
-    issueLoan
+  '/payment',
+  verifyToken,
+  authorizeRoles('admin'),
+  recordLoanPayment
 );
 
-router.post(
-    "/payment",
-    verifyToken,
-    authorizeRoles("admin"),
-    recordLoanPayment
-);
-
-router.get(
-    "/",
-    verifyToken,
-    getLoans
-);
+/**
+ * Get all loans (authenticated users)
+ */
+router.get('/', verifyToken, getLoans);
 
 module.exports = router;
