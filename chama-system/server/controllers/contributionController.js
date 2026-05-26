@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const logAudit = require('../utils/auditLogger');
 const notificationService = require('../services/notificationService');
+const { sendSMS } = require('../services/smsService');
 
 // ADD CONTRIBUTION
 exports.addContribution = async (req, res) => {
@@ -22,10 +23,15 @@ exports.addContribution = async (req, res) => {
     const contributionMonth = (contribution_month || '').trim();
     const contributionYear = Number(contribution_year);
 
-    // VALIDATION FIX (strict)
-    if (!member_id || !amount || !contributionMonth || !contribution_year) {
+    // VALIDATION
+    if (
+      member_id === undefined ||
+      amount === undefined ||
+      !contributionMonth ||
+      contribution_year === undefined
+    ) {
       return res.status(400).json({
-        message: 'All contribution fields required',
+        message: 'All contribution fields are required',
       });
     }
 
@@ -44,9 +50,11 @@ exports.addContribution = async (req, res) => {
     try {
       await client.query('BEGIN');
 
+      // Prevent duplicate monthly contribution
       const existingContribution = await client.query(
         `
-        SELECT id FROM contributions
+        SELECT id
+        FROM contributions
         WHERE member_id = $1
         AND contribution_month = $2
         AND contribution_year = $3
@@ -62,6 +70,7 @@ exports.addContribution = async (req, res) => {
         });
       }
 
+      // Save contribution
       const result = await client.query(
         `
         INSERT INTO contributions (
@@ -85,6 +94,7 @@ exports.addContribution = async (req, res) => {
 
       const contribution = result.rows[0];
 
+      // Audit log
       await logAudit({
         client,
         user_id: recorded_by,
@@ -95,7 +105,7 @@ exports.addContribution = async (req, res) => {
 
       await client.query('COMMIT');
 
-      // Notification (non-blocking safe)
+      // Create notification (non-blocking)
       notificationService
         .createNotification({
           userId: recorded_by,
@@ -108,8 +118,31 @@ exports.addContribution = async (req, res) => {
         })
         .catch((err) => console.error('Notification error:', err.message));
 
+      // Send SMS notification
+      try {
+        const memberResult = await pool.query(
+          `
+          SELECT phone, full_name
+          FROM members
+          WHERE id = $1
+          `,
+          [member_id]
+        );
+
+        const member = memberResult.rows[0];
+
+        if (member?.phone) {
+          await sendSMS(
+            member.phone,
+            `Hello ${member.full_name}, your contribution of KES ${contributionAmount} for ${contributionMonth} ${contributionYear} has been received successfully.`
+          );
+        }
+      } catch (smsError) {
+        console.error('SMS error:', smsError.message);
+      }
+
       return res.status(201).json({
-        message: 'Contribution recorded',
+        message: 'Contribution recorded successfully',
         contribution,
       });
     } catch (txErr) {
@@ -128,7 +161,9 @@ exports.addContribution = async (req, res) => {
       message: 'Server error',
     });
   } finally {
-    if (client) client.release();
+    if (client) {
+      client.release();
+    }
   }
 };
 
@@ -141,7 +176,8 @@ exports.getContributions = async (req, res) => {
         contributions.*,
         members.full_name
       FROM contributions
-      JOIN members ON contributions.member_id = members.id
+      JOIN members
+      ON contributions.member_id = members.id
       ORDER BY contributions.created_at DESC
       `
     );
