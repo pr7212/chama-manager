@@ -5,22 +5,16 @@ const verifyToken = require('../middleware/authMiddleware');
 const pool = require('../config/db');
 const { createNotification } = require('../services/notificationService');
 
-/**
- * Get notifications for logged-in user
- */
+// Get notifications for logged-in user
 router.get('/', verifyToken, async (req, res) => {
   try {
     const result = await pool.query(
-      `
-      SELECT *
-      FROM notifications
-      WHERE user_id = $1
-      ORDER BY created_at DESC
-      LIMIT 20
-      `,
+      `SELECT * FROM notifications
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 20`,
       [req.user.id]
     );
-
     return res.status(200).json(result.rows);
   } catch (error) {
     console.error(error);
@@ -28,9 +22,29 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
-/**
- * Manually trigger notification (admin use)
- */
+// Mark a notification as read
+router.patch('/:id/read', verifyToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `UPDATE notifications
+       SET read_at = NOW()
+       WHERE id = $1 AND user_id = $2
+       RETURNING id`,
+      [req.params.id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
+    return res.status(200).json({ message: 'Marked as read' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Manually trigger notification (admin use)
 router.post('/trigger', verifyToken, async (req, res) => {
   try {
     const {
@@ -44,9 +58,7 @@ router.post('/trigger', verifyToken, async (req, res) => {
     } = req.body;
 
     if (!user_id || !channel || !type || !title || !message) {
-      return res.status(400).json({
-        message: 'Missing required fields',
-      });
+      return res.status(400).json({ message: 'Missing required fields' });
     }
 
     const notif = await createNotification({
@@ -59,10 +71,9 @@ router.post('/trigger', verifyToken, async (req, res) => {
       relatedEntityId: related_entity_id ?? null,
     });
 
-    return res.status(201).json({
-      message: 'Notification created',
-      notification: notif,
-    });
+    return res
+      .status(201)
+      .json({ message: 'Notification created', notification: notif });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Server error' });

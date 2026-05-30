@@ -4,23 +4,32 @@ const generateToken = require('../utils/generateToken');
 
 exports.registerUser = async (req, res) => {
   try {
-    const { full_name, phone, password } = req.body;
+    // Only allow registration with the correct setup key from .env
+    const setupKey = req.headers['x-setup-key'] || req.body.setup_key;
 
-    if (!full_name || !phone || !password) {
-      return res.status(400).json({
-        message: 'All fields are required',
+    if (
+      !process.env.ADMIN_SETUP_KEY ||
+      setupKey !== process.env.ADMIN_SETUP_KEY
+    ) {
+      return res.status(403).json({
+        message: 'Forbidden: valid setup key required',
       });
     }
 
-    // check if user already exists
+    const { full_name, phone, password } = req.body;
+
+    if (!full_name || !phone || !password) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
     const existing = await pool.query('SELECT id FROM users WHERE phone = $1', [
       phone,
     ]);
 
     if (existing.rows.length > 0) {
-      return res.status(409).json({
-        message: 'Phone number already registered',
-      });
+      return res
+        .status(409)
+        .json({ message: 'Phone number already registered' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -38,9 +47,7 @@ exports.registerUser = async (req, res) => {
     });
   } catch (error) {
     console.error(error.message);
-    res.status(500).json({
-      message: 'Server error',
-    });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -49,29 +56,23 @@ exports.loginUser = async (req, res) => {
     const { phone, password } = req.body;
 
     if (!phone || !password) {
-      return res.status(400).json({
-        message: 'Phone and password required',
-      });
+      return res.status(400).json({ message: 'Phone and password required' });
     }
 
-    const result = await pool.query('SELECT * FROM users WHERE phone = $1', [
-      phone,
-    ]);
+    const result = await pool.query(
+      'SELECT id, full_name, phone, role, password FROM users WHERE phone = $1',
+      [phone]
+    );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
-        message: 'User not found',
-      });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     const user = result.rows[0];
-
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return res.status(401).json({
-        message: 'Invalid credentials',
-      });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const token = generateToken(user);
@@ -88,9 +89,6 @@ exports.loginUser = async (req, res) => {
     });
   } catch (error) {
     console.error(error.message);
-
-    res.status(500).json({
-      message: 'Server error',
-    });
+    res.status(500).json({ message: 'Server error' });
   }
 };

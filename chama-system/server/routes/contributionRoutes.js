@@ -10,7 +10,7 @@ const {
 } = require('../controllers/contributionController');
 
 // Create contribution (admin only)
-router.post('/', verifyToken, authorizeRoles('Admin'), addContribution);
+router.post('/', verifyToken, authorizeRoles('admin'), addContribution);
 
 // Get contributions (any authenticated user)
 router.get('/', verifyToken, getContributions);
