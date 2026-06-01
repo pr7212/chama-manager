@@ -14,7 +14,110 @@
     />
 
     <style>
-      /* your CSS stays unchanged (already good) */
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      body {
+        font-family: 'Outfit', sans-serif;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .login-container {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 48px 40px;
+        width: 100%;
+        max-width: 420px;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+      }
+
+      .header-section {
+        text-align: center;
+        margin-bottom: 36px;
+      }
+
+      .logo-glow {
+        width: 64px;
+        height: 64px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        box-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
+      }
+
+      .logo-glow svg {
+        width: 32px;
+        height: 32px;
+        fill: white;
+      }
+
+      h2 {
+        color: #ffffff;
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .subtitle {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 14px;
+      }
+
+      .input-group {
+        margin-bottom: 16px;
+      }
+
+      .input-group input {
+        width: 100%;
+        padding: 14px 18px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        color: #ffffff;
+        font-family: 'Outfit', sans-serif;
+        font-size: 15px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+
+      .input-group input::placeholder { color: rgba(255,255,255,0.35); }
+      .input-group input:focus { border-color: #667eea; }
+
+      button[type="submit"] {
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border: none;
+        border-radius: 12px;
+        color: white;
+        font-family: 'Outfit', sans-serif;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 8px;
+        transition: opacity 0.2s, transform 0.1s;
+      }
+
+      button[type="submit"]:hover { opacity: 0.9; transform: translateY(-1px); }
+      button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
+
+      .footer-text {
+        text-align: center;
+        color: rgba(255,255,255,0.45);
+        font-size: 13px;
+        margin-top: 24px;
+      }
+
+      .footer-text a { color: #667eea; text-decoration: none; }
+      .footer-text a:hover { text-decoration: underline; }
     </style>
   </head>
 
