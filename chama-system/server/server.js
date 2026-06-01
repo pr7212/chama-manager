@@ -65,6 +65,11 @@ app.use('/js', express.static(path.join(__dirname, '../js')));
 /**
  * REQUEST LOGGER
  */
+// Redirect root to login
+app.get('/', (req, res) => {
+  res.redirect('/login.html');
+});
+
 app.use((req, res, next) => {
   if (process.env.NODE_ENV !== 'production') {
     console.log(`${req.method} ${req.url}`);
@@ -85,7 +90,7 @@ pool
 /**
  * ROUTES
  */
-app.get('/', (req, res) => {
+app.get('/api', (req, res) => {
   res.send('Chama Manager API Running...');
 });
 

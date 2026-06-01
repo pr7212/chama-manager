@@ -8,6 +8,7 @@ const {
   issueLoan,
   recordLoanPayment,
   getLoans,
+  getLoanPayments,
 } = require('../controllers/loanController');
 
 /**
@@ -29,5 +30,6 @@ router.post(
  * Get all loans (authenticated users)
  */
 router.get('/', verifyToken, getLoans);
+router.get('/:id/payments', verifyToken, getLoanPayments);
 
 module.exports = router;

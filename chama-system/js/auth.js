@@ -1,7 +1,7 @@
 const API_BASE_URL =
   typeof CONFIG !== 'undefined'
-    ? CONFIG.API_URL.replace(/\/api$/, '')
-    : window.location.origin;
+    ? CONFIG.API_URL
+    : `${window.location.origin}/api`;
 
 const getToken = () => localStorage.getItem('token');
 
