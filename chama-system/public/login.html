@@ -5,20 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chama Manager - Login</title>
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Using local/system fonts for offline use -->
 
     <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
       body {
         font-family: 'Outfit', sans-serif;
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        background: linear-gradient(
+          135deg,
+          #1a1a2e 0%,
+          #16213e 50%,
+          #0f3460 100%
+        );
         min-height: 100vh;
         display: flex;
         align-items: center;
@@ -88,10 +91,14 @@
         transition: border-color 0.2s;
       }
 
-      .input-group input::placeholder { color: rgba(255,255,255,0.35); }
-      .input-group input:focus { border-color: #667eea; }
+      .input-group input::placeholder {
+        color: rgba(255, 255, 255, 0.35);
+      }
+      .input-group input:focus {
+        border-color: #667eea;
+      }
 
-      button[type="submit"] {
+      button[type='submit'] {
         width: 100%;
         padding: 14px;
         background: linear-gradient(135deg, #667eea, #764ba2);
@@ -103,21 +110,34 @@
         font-weight: 600;
         cursor: pointer;
         margin-top: 8px;
-        transition: opacity 0.2s, transform 0.1s;
+        transition:
+          opacity 0.2s,
+          transform 0.1s;
       }
 
-      button[type="submit"]:hover { opacity: 0.9; transform: translateY(-1px); }
-      button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
+      button[type='submit']:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+      button[type='submit']:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
 
       .footer-text {
         text-align: center;
-        color: rgba(255,255,255,0.45);
+        color: rgba(255, 255, 255, 0.45);
         font-size: 13px;
         margin-top: 24px;
       }
 
-      .footer-text a { color: #667eea; text-decoration: none; }
-      .footer-text a:hover { text-decoration: underline; }
+      .footer-text a {
+        color: #667eea;
+        text-decoration: none;
+      }
+      .footer-text a:hover {
+        text-decoration: underline;
+      }
     </style>
   </head>
 

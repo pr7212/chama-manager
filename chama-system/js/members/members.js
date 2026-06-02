@@ -58,6 +58,34 @@ if (memberForm) {
   });
 }
 
+// Backwards-compatible global used by dashboard inline button
+async function addMember() {
+  const full_name = document.getElementById('full_name')?.value.trim();
+  const phone = document.getElementById('phone')?.value.trim();
+  const national_id = document.getElementById('national_id')?.value.trim();
+
+  if (!full_name || !phone || !national_id) {
+    alert('All fields are required');
+    return;
+  }
+
+  try {
+    const data = await apiRequest('/members', 'POST', {
+      full_name,
+      phone,
+      national_id,
+    });
+    alert(data.message || 'Member saved');
+    document.getElementById('memberForm')?.reset();
+    loadMembers();
+  } catch (err) {
+    console.error(err);
+    alert(err.message || 'Failed to save member');
+  }
+}
+
+window.addMember = addMember;
+
 async function loadMembers() {
   try {
     const data = await apiRequest('/members');

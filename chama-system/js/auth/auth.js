@@ -56,3 +56,8 @@ window.Auth = {
   logout,
   requireAuth,
 };
+
+// Backwards-compatible globals used by inline handlers
+// (some pages call logout() or requireAuth() directly)
+window.logout = logout;
+window.requireAuth = requireAuth;
