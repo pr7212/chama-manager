@@ -4,91 +4,75 @@ const generateToken = require('../utils/generateToken');
 
 exports.registerUser = async (req, res) => {
   try {
-    // Only allow registration with the correct setup key from .env
-    const setupKey = req.headers['x-setup-key'] || req.body.setup_key;
-
-    if (
-      !process.env.ADMIN_SETUP_KEY ||
-      setupKey !== process.env.ADMIN_SETUP_KEY
-    ) {
-      return res.status(403).json({
-        message: 'Forbidden: valid setup key required',
-      });
-    }
-
     const { full_name, phone, password } = req.body;
 
-    if (!full_name || !phone || !password) {
-      return res.status(400).json({ message: 'All fields are required' });
-    }
-
-    const existing = await pool.query('SELECT id FROM users WHERE phone = $1', [
+    // check existing
+    const exists = await pool.query('SELECT id FROM users WHERE phone=$1', [
       phone,
     ]);
-
-    if (existing.rows.length > 0) {
+    if (exists.rows.length) {
       return res
-        .status(409)
+        .status(400)
         .json({ message: 'Phone number already registered' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(password, 10);
 
-    const result = await pool.query(
-      `INSERT INTO users (full_name, phone, password)
-       VALUES ($1, $2, $3)
-       RETURNING id, full_name, phone, role`,
-      [full_name, phone, hashedPassword]
+    // INSERT without forcing role; DB default will apply
+    const insert = await pool.query(
+      `INSERT INTO users(full_name, phone, password)
+       VALUES($1, $2, $3) RETURNING id`,
+      [full_name, phone, hashed]
     );
 
-    res.status(201).json({
-      message: 'User registered successfully',
-      user: result.rows[0],
-    });
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ message: 'Server error' });
+    // fetch the freshly created row (to get DB default role)
+    const userRes = await pool.query(
+      'SELECT id, full_name, phone, role FROM users WHERE id = $1',
+      [insert.rows[0].id]
+    );
+
+    const user = userRes.rows[0];
+    const token = generateToken(user);
+
+    return res
+      .status(201)
+      .json({ message: 'User registered successfully', user, token });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
 exports.loginUser = async (req, res) => {
   try {
     const { phone, password } = req.body;
-
-    if (!phone || !password) {
-      return res.status(400).json({ message: 'Phone and password required' });
-    }
-
-    const result = await pool.query(
-      'SELECT id, full_name, phone, role, password FROM users WHERE phone = $1',
+    const userRes = await pool.query(
+      'SELECT id, full_name, phone, password, role FROM users WHERE phone=$1',
       [phone]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
+    if (!userRes.rows.length) {
+      return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const user = result.rows[0];
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+    const userRow = userRes.rows[0];
+    const match = await bcrypt.compare(password, userRow.password);
+    if (!match) {
+      return res.status(400).json({ message: 'Invalid credentials' });
     }
+
+    // Use DB row (without password) for token / response
+    const user = {
+      id: userRow.id,
+      full_name: userRow.full_name,
+      phone: userRow.phone,
+      role: userRow.role,
+    };
 
     const token = generateToken(user);
-
-    res.status(200).json({
-      message: 'Login successful',
-      token,
-      user: {
-        id: user.id,
-        full_name: user.full_name,
-        phone: user.phone,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ message: 'Server error' });
+    return res.json({ message: 'Login successful', user, token });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Server error' });
   }
 };
