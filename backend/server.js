@@ -1,10 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../.env'), quiet: true });
 
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { validateEnv } = require('./config/env');
+
+validateEnv();
 
 const pool = require('./config/db');
 
@@ -16,6 +18,7 @@ const statementRoutes = require('./routes/statementRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const fineRoutes = require('./routes/fineRoutes');
 const exportRoutes = require('./routes/exportRoutes');
+const ussdRoutes = require('./routes/ussdRoutes');
 
 const verifyToken = require('./middleware/authMiddleware');
 const errorHandler = require('./middleware/errorMiddleware');
@@ -35,6 +38,7 @@ app.use(
 );
 
 app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '20kb' }));
 
 /**
  * GLOBAL RATE LIMIT
@@ -109,6 +113,7 @@ app.use('/api/statements', statementRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/fines', fineRoutes);
 app.use('/api/exports', exportRoutes);
+app.use('/api/ussd', ussdRoutes);
 
 app.get('/api/dashboard', verifyToken, (req, res) => {
   res.json({

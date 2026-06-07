@@ -1,9 +1,8 @@
 // promoteUser.js - promotes a user to admin by phone
 // Usage: node scripts/promoteUser.js <phone>
-const path = require('path');
+const { validateEnv } = require('../backend/config/env');
 
-require('dotenv').config({ path: path.join(__dirname, '../.env'), quiet: true });
-
+validateEnv(['DATABASE_URL']);
 const pool = require('../backend/config/db');
 
 const phone = process.argv[2];

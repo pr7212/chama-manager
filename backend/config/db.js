@@ -1,11 +1,7 @@
 const { Pool } = require('pg');
+const { validateEnv } = require('./env');
 
-if (!process.env.DATABASE_URL) {
-  console.error(
-    'DATABASE_URL is missing. Create a .env file and set your Supabase/Postgres connection string.'
-  );
-  process.exit(1);
-}
+validateEnv(['DATABASE_URL']);
 
 const isSupabase = process.env.DATABASE_URL.includes('supabase.co');
 

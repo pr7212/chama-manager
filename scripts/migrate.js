@@ -1,8 +1,9 @@
 const fs = require('fs/promises');
 const path = require('path');
 
-require('dotenv').config({ path: path.join(__dirname, '../.env'), quiet: true });
+const { validateEnv } = require('../backend/config/env');
 
+validateEnv(['DATABASE_URL']);
 const pool = require('../backend/config/db');
 
 const migrationsDir = path.join(__dirname, '../database/migrations');

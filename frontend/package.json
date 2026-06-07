@@ -1,0 +1,9 @@
+{
+  "name": "frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Chama Manager static frontend",
+  "scripts": {
+    "test": "node -e \"console.log('No frontend tests configured')\""
+  }
+}
