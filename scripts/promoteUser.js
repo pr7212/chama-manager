@@ -1,7 +1,10 @@
 // promoteUser.js - promotes a user to admin by phone
 // Usage: node scripts/promoteUser.js <phone>
-require('dotenv').config({ path: './chama-system/.env' });
-const pool = require('../chama-system/server/config/db');
+const path = require('path');
+
+require('dotenv').config({ path: path.join(__dirname, '../.env'), quiet: true });
+
+const pool = require('../backend/config/db');
 
 const phone = process.argv[2];
 if (!phone) {

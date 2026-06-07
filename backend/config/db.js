@@ -2,9 +2,9 @@ const { Pool } = require('pg');
 
 if (!process.env.DATABASE_URL) {
   console.error(
-    '❌ DATABASE_URL is missing. Create a .env file and set your Supabase/Postgres connection string.'
+    'DATABASE_URL is missing. Create a .env file and set your Supabase/Postgres connection string.'
   );
-  process.exit(1); // prevents server from running in broken state
+  process.exit(1);
 }
 
 const isSupabase = process.env.DATABASE_URL.includes('supabase.co');
@@ -17,9 +17,8 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000,
 });
 
-// Optional: log DB connection issues early
 pool.on('error', (err) => {
-  console.error('❌ Unexpected PostgreSQL error:', err);
+  console.error('Unexpected PostgreSQL error:', err);
 });
 
 module.exports = pool;

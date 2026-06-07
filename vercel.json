@@ -2,14 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "chama-system/server/server.js",
+      "src": "backend/server.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "chama-system/server/server.js"
+      "dest": "backend/server.js"
     }
   ]
 }
