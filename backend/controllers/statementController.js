@@ -1,46 +1,50 @@
 const pool = require('../config/db');
 const PDFDocument = require('pdfkit');
+const ledgerService = require('../services/ledgerService');
 
-// GET MEMBER STATEMENT
+// GET MEMBER STATEMENT (with Group Isolation & Ledger integration)
 exports.getMemberStatement = async (req, res) => {
   try {
     const memberId = req.params.id;
+    const groupId = req.user?.group_id || 1;
 
     const memberResult = await pool.query(
       `
       SELECT * FROM members
-      WHERE id = $1
+      WHERE id = $1 AND group_id = $2
       `,
-      [memberId]
-    );
-
-    const contributionsResult = await pool.query(
-      `
-      SELECT *
-      FROM contributions
-      WHERE member_id = $1
-      ORDER BY created_at DESC
-      `,
-      [memberId]
-    );
-
-    const loansResult = await pool.query(
-      `
-      SELECT *
-      FROM loans
-      WHERE member_id = $1
-      ORDER BY created_at DESC
-      `,
-      [memberId]
+      [memberId, groupId]
     );
 
     const member = memberResult.rows[0];
 
     if (!member) {
       return res.status(404).json({
+        success: false,
         message: 'Member not found',
+        data: null
       });
     }
+
+    const contributionsResult = await pool.query(
+      `
+      SELECT *
+      FROM contributions
+      WHERE member_id = $1 AND group_id = $2
+      ORDER BY created_at DESC
+      `,
+      [memberId, groupId]
+    );
+
+    const loansResult = await pool.query(
+      `
+      SELECT *
+      FROM loans
+      WHERE member_id = $1 AND group_id = $2
+      ORDER BY created_at DESC
+      `,
+      [memberId, groupId]
+    );
 
     const contributions = contributionsResult.rows;
     const loans = loansResult.rows;
@@ -51,21 +55,38 @@ exports.getMemberStatement = async (req, res) => {
     );
 
     const activeLoans = loans.filter((loan) => loan.status === 'active');
+    
+    // Ledger: Calculate current member balance dynamically
+    const dynamicBalance = await ledgerService.getMemberBalance(memberId, groupId);
 
-    res.status(200).json({
+    return res.status(200).json({
+      success: true,
+      message: 'Statement retrieved successfully',
       member,
       contributions,
       loans,
       summary: {
         totalContributions,
         activeLoans: activeLoans.length,
+        ledgerBalance: dynamicBalance
       },
+      data: {
+        member,
+        contributions,
+        loans,
+        summary: {
+          totalContributions,
+          activeLoans: activeLoans.length,
+          ledgerBalance: dynamicBalance
+        }
+      }
     });
   } catch (error) {
     console.error(error.message);
-
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
       message: 'Server error',
+      data: null
     });
   }
 };
@@ -74,20 +95,23 @@ exports.getMemberStatement = async (req, res) => {
 exports.generateStatementPDF = async (req, res) => {
   try {
     const memberId = req.params.id;
+    const groupId = req.user?.group_id || 1;
 
     const memberResult = await pool.query(
       `
       SELECT * FROM members
-      WHERE id = $1
+      WHERE id = $1 AND group_id = $2
       `,
-      [memberId]
+      [memberId, groupId]
     );
 
     const member = memberResult.rows[0];
 
     if (!member) {
       return res.status(404).json({
+        success: false,
         message: 'Member not found',
+        data: null
       });
     }
 
@@ -95,24 +119,23 @@ exports.generateStatementPDF = async (req, res) => {
       `
       SELECT *
       FROM contributions
-      WHERE member_id = $1
+      WHERE member_id = $1 AND group_id = $2
       `,
-      [memberId]
+      [memberId, groupId]
     );
 
     const loansResult = await pool.query(
       `
       SELECT *
       FROM loans
-      WHERE member_id = $1
+      WHERE member_id = $1 AND group_id = $2
       `,
-      [memberId]
+      [memberId, groupId]
     );
 
     const doc = new PDFDocument();
 
     res.setHeader('Content-Type', 'application/pdf');
-
     res.setHeader(
       'Content-Disposition',
       `attachment; filename=statement_${member.id}.pdf`
@@ -128,6 +151,7 @@ exports.generateStatementPDF = async (req, res) => {
 
     doc.fontSize(14).text(`Name: ${member.full_name}`);
     doc.text(`Phone: ${member.phone}`);
+    doc.text(`Chama ID: Group ${groupId}`);
 
     doc.moveDown();
 
@@ -156,9 +180,10 @@ exports.generateStatementPDF = async (req, res) => {
     doc.end();
   } catch (error) {
     console.error(error.message);
-
     res.status(500).json({
+      success: false,
       message: 'Server error',
+      data: null
     });
   }
 };

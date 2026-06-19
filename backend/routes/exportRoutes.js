@@ -26,14 +26,20 @@ function toCSV(rows) {
   return csvLines.join('\n');
 }
 
+function getGroupId(req) {
+  return req.user?.group_id || 1;
+}
+
 // ======================
 // EXPORT CONTRIBUTIONS
 // ======================
 router.get('/contributions', verifyToken, async (req, res) => {
   try {
+    const groupId = getGroupId(req);
     const format = (req.query.format || 'csv').toLowerCase();
 
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       SELECT
         contributions.id,
         members.full_name,
@@ -43,9 +49,14 @@ router.get('/contributions', verifyToken, async (req, res) => {
         contributions.payment_date,
         contributions.created_at
       FROM contributions
-      JOIN members ON contributions.member_id = members.id
+      JOIN members
+        ON contributions.member_id = members.id
+        AND contributions.group_id = members.group_id
+      WHERE contributions.group_id = $1
       ORDER BY contributions.created_at DESC
-    `);
+      `,
+      [groupId]
+    );
 
     const rows = result.rows;
 
@@ -94,9 +105,11 @@ router.get('/contributions', verifyToken, async (req, res) => {
 // ======================
 router.get('/loans', verifyToken, async (req, res) => {
   try {
+    const groupId = getGroupId(req);
     const format = (req.query.format || 'csv').toLowerCase();
 
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       SELECT
         loans.id,
         members.full_name,
@@ -109,9 +122,14 @@ router.get('/loans', verifyToken, async (req, res) => {
         loans.status,
         loans.created_at
       FROM loans
-      JOIN members ON loans.member_id = members.id
+      JOIN members
+        ON loans.member_id = members.id
+        AND loans.group_id = members.group_id
+      WHERE loans.group_id = $1
       ORDER BY loans.created_at DESC
-    `);
+      `,
+      [groupId]
+    );
 
     const rows = result.rows;
 

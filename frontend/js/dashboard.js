@@ -54,7 +54,10 @@ async function renderContributionChart() {
   }
 }
 
-if (requireAuth()) {
+const canLoadDashboard =
+  typeof requireAuth === 'function' ? requireAuth() : !!localStorage.getItem('token');
+
+if (canLoadDashboard) {
   loadMembers();
   loadLoans();
 

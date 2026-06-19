@@ -3,10 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chama Manager - Login</title>
-
-    <!-- Using local/system fonts for offline use -->
-
+    <title>Chama Manager - Register</title>
     <style>
       * {
         margin: 0;
@@ -28,7 +25,7 @@
         justify-content: center;
       }
 
-      .login-container {
+      .register-container {
         background: rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -142,7 +139,7 @@
   </head>
 
   <body>
-    <div class="login-container">
+    <div class="register-container">
       <div class="header-section">
         <div class="logo-glow">
           <svg viewBox="0 0 24 24">
@@ -152,11 +149,21 @@
           </svg>
         </div>
 
-        <h2>Chama Login</h2>
-        <p class="subtitle">Securely access your Chama account</p>
+        <h2>Chama Register</h2>
+        <p class="subtitle">Create a new Chama manager account</p>
       </div>
 
-      <form id="loginForm">
+      <form id="registerForm">
+        <div class="input-group">
+          <input
+            type="text"
+            id="full_name"
+            placeholder="Full Name"
+            required
+            autocomplete="name"
+          />
+        </div>
+
         <div class="input-group">
           <input
             type="text"
@@ -173,20 +180,20 @@
             id="password"
             placeholder="Password"
             required
-            autocomplete="current-password"
+            autocomplete="new-password"
           />
         </div>
 
-        <button type="submit" id="loginBtn">Login</button>
+        <button type="submit" id="registerBtn">Register</button>
       </form>
 
       <p class="footer-text">
-        Don't have an account? <a href="register.html">Register here</a>
+        Already have an account? <a href="login.html">Login here</a>
       </p>
     </div>
 
     <!-- Scripts -->
     <script src="/js/config.js"></script>
-    <script src="/js/login.js"></script>
+    <script src="/js/register.js"></script>
   </body>
 </html>

@@ -1,11 +1,11 @@
 const API_URL = CONFIG.API_URL;
 
-function getToken() {
+function getApiToken() {
   return localStorage.getItem('token');
 }
 
 async function apiRequest(endpoint, method = 'GET', body = null) {
-  const token = getToken();
+  const token = getApiToken();
 
   if (!token) {
     window.location.href = 'login.html';
@@ -33,14 +33,19 @@ async function apiRequest(endpoint, method = 'GET', body = null) {
     return null;
   }
 
-  const data = await response.json();
+  const resData = await response.json();
 
   if (!response.ok) {
-    const err = new Error(data.message || 'Request failed');
+    const err = new Error(resData.message || 'Request failed');
     err.status = response.status;
-    err.data = data;
+    err.data = resData;
     throw err;
   }
 
-  return data;
+  // Automatically unwrap standard response envelop
+  if (resData && typeof resData === 'object' && resData.success === true && 'data' in resData) {
+    return resData.data;
+  }
+
+  return resData;
 }

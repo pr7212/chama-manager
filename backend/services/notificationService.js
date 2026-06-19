@@ -5,6 +5,7 @@ const pool = require('../config/db');
  */
 async function createNotification({
   userId,
+  groupId = null,
   channel,
   type,
   title,
@@ -20,6 +21,7 @@ async function createNotification({
     `
     INSERT INTO notifications (
       user_id,
+      group_id,
       channel,
       type,
       title,
@@ -27,10 +29,19 @@ async function createNotification({
       related_entity_type,
       related_entity_id
     )
-    VALUES ($1,$2,$3,$4,$5,$6,$7)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
     RETURNING *
     `,
-    [userId, channel, type, title, message, relatedEntityType, relatedEntityId]
+    [
+      userId,
+      groupId,
+      channel,
+      type,
+      title,
+      message,
+      relatedEntityType,
+      relatedEntityId,
+    ]
   );
 
   return result.rows[0];

@@ -16,17 +16,35 @@ function clearLoading(button) {
   button.disabled = false;
 }
 
+function getFieldValue(...ids) {
+  for (const id of ids) {
+    const element = document.getElementById(id);
+    if (element) return element.value.trim();
+  }
+
+  return '';
+}
+
+function clearMemberInputs() {
+  ['full_name', 'fullName', 'phone', 'national_id', 'nationalId'].forEach(
+    (id) => {
+      const element = document.getElementById(id);
+      if (element) element.value = '';
+    }
+  );
+}
+
 const memberForm = document.getElementById('memberForm');
 
 if (memberForm) {
   memberForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const full_name = document.getElementById('full_name').value.trim();
+    const full_name = getFieldValue('full_name', 'fullName');
 
-    const phone = document.getElementById('phone').value.trim();
+    const phone = getFieldValue('phone');
 
-    const national_id = document.getElementById('national_id').value.trim();
+    const national_id = getFieldValue('national_id', 'nationalId');
 
     const button = memberForm.querySelector('button');
 
@@ -47,7 +65,11 @@ if (memberForm) {
 
       alert(data.message || 'Member saved');
 
-      memberForm.reset();
+      if (typeof memberForm.reset === 'function') {
+        memberForm.reset();
+      } else {
+        clearMemberInputs();
+      }
 
       loadMembers();
     } catch (error) {
@@ -60,9 +82,9 @@ if (memberForm) {
 
 // Backwards-compatible global used by dashboard inline button
 async function addMember() {
-  const full_name = document.getElementById('full_name')?.value.trim();
-  const phone = document.getElementById('phone')?.value.trim();
-  const national_id = document.getElementById('national_id')?.value.trim();
+  const full_name = getFieldValue('full_name', 'fullName');
+  const phone = getFieldValue('phone');
+  const national_id = getFieldValue('national_id', 'nationalId');
 
   if (!full_name || !phone || !national_id) {
     alert('All fields are required');
@@ -76,7 +98,12 @@ async function addMember() {
       national_id,
     });
     alert(data.message || 'Member saved');
-    document.getElementById('memberForm')?.reset();
+    const memberFormElement = document.getElementById('memberForm');
+    if (typeof memberFormElement?.reset === 'function') {
+      memberFormElement.reset();
+    } else {
+      clearMemberInputs();
+    }
     loadMembers();
   } catch (err) {
     console.error(err);

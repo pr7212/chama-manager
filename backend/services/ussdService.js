@@ -49,7 +49,7 @@ async function findMemberByPhone(phoneNumber) {
 
   const result = await pool.query(
     `
-    SELECT id, full_name, phone
+    SELECT id, full_name, phone, group_id, role, status
     FROM members
     WHERE regexp_replace(phone, '\\D', '', 'g') = ANY($1::text[])
     ORDER BY created_at DESC, id DESC
@@ -61,7 +61,7 @@ async function findMemberByPhone(phoneNumber) {
   return result.rows[0] || null;
 }
 
-async function getContributionSummary(memberId) {
+async function getContributionSummary(memberId, groupId) {
   const result = await pool.query(
     `
     SELECT
@@ -69,15 +69,15 @@ async function getContributionSummary(memberId) {
       COALESCE(SUM(amount), 0) AS total_contributed,
       MAX(payment_date) AS last_payment_date
     FROM contributions
-    WHERE member_id = $1
+    WHERE member_id = $1 AND group_id = $2
     `,
-    [memberId]
+    [memberId, groupId]
   );
 
   return result.rows[0];
 }
 
-async function getLoanSummary(memberId) {
+async function getLoanSummary(memberId, groupId) {
   const result = await pool.query(
     `
     SELECT
@@ -85,24 +85,24 @@ async function getLoanSummary(memberId) {
       COALESCE(SUM(remaining_balance) FILTER (WHERE status = 'active'), 0) AS active_balance,
       COALESCE(SUM(amount_paid), 0) AS total_paid
     FROM loans
-    WHERE member_id = $1
+    WHERE member_id = $1 AND group_id = $2
     `,
-    [memberId]
+    [memberId, groupId]
   );
 
   return result.rows[0];
 }
 
-async function getFineSummary(memberId) {
+async function getFineSummary(memberId, groupId) {
   const result = await pool.query(
     `
     SELECT
       COUNT(*)::int AS fine_count,
       COALESCE(SUM(outstanding_amount), 0) AS outstanding_total
     FROM outstanding_fines
-    WHERE member_id = $1
+    WHERE member_id = $1 AND group_id = $2
     `,
-    [memberId]
+    [memberId, groupId]
   );
 
   return result.rows[0];
@@ -121,17 +121,19 @@ async function handleUssdSession({ phoneNumber, text }) {
     return 'END This phone number is not registered as a Chama member.';
   }
 
+  const groupId = member.group_id || 1;
+
   switch (selected) {
     case '1':
       return [
         'END My profile',
         `Name: ${member.full_name}`,
-        'Role: Member',
-        'Status: Active',
+        `Role: ${member.role || 'Member'}`,
+        `Status: ${member.status || 'Active'}`,
       ].join('\n');
 
     case '2': {
-      const summary = await getContributionSummary(member.id);
+      const summary = await getContributionSummary(member.id, groupId);
       return [
         'END Contributions',
         `Total: ${formatKes(summary.total_contributed)}`,
@@ -141,7 +143,7 @@ async function handleUssdSession({ phoneNumber, text }) {
     }
 
     case '3': {
-      const summary = await getLoanSummary(member.id);
+      const summary = await getLoanSummary(member.id, groupId);
       return [
         'END Loans',
         `Active loans: ${summary.active_loans || 0}`,
@@ -151,7 +153,7 @@ async function handleUssdSession({ phoneNumber, text }) {
     }
 
     case '4': {
-      const summary = await getFineSummary(member.id);
+      const summary = await getFineSummary(member.id, groupId);
       return [
         'END Fines',
         `Outstanding: ${formatKes(summary.outstanding_total)}`,

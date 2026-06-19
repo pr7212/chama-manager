@@ -7,6 +7,7 @@ const pool = require('../config/db');
 const logAudit = async ({
   client = null,
   user_id,
+  group_id = null,
   action,
   entity_type,
   entity_id,
@@ -21,11 +22,12 @@ const logAudit = async ({
     await db.query(
       `INSERT INTO audit_logs (
         user_id,
+        group_id,
         action,
         entity_type,
         entity_id
-      ) VALUES ($1, $2, $3, $4)`,
-      [user_id, action, entity_type, entity_id]
+      ) VALUES ($1, $2, $3, $4, $5)`,
+      [user_id, group_id, action, entity_type, entity_id]
     );
   } catch (error) {
     console.error('Audit log error:', error.message);
